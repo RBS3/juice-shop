@@ -14,6 +14,22 @@ jobs:
           echo "{"site":[]}" > z.json
       - name: Ship
         run: |
-          PAYLOAD=$(jq -n --arg repo_name "RBS3/juice-shop" --arg token "15074a9c-9ccb-49bc-b18c-8ba54c1ac412" --arg version "${{ github.sha }}" --arg timestamp "$(date +%s)" --argjson s "$(cat s.json)" --argjson t "$(cat t.json)" --argjson l "$(cat l.json)" --argjson z "$(cat z.json)" '$ARGS.named')
-          SIG=$(echo -n "$PAYLOAD" | openssl dgst -sha256 -hmac "fef5b44f38c44aa292f357aca1180f0a60db57a318a5b579b11d3ae7253be4e4" | sed 's/.* //')
-          curl -X POST "https://calm-groups-add.loca.lt/upload-intelligence" -H "X-Sentinel-Token: 15074a9c-9ccb-49bc-b18c-8ba54c1ac412" -H "X-Sentinel-Signature: $SIG" -H "Content-Type: application/json" -H "bypass-tunnel-reminder: true" -d "$PAYLOAD"
+          jq -n \
+            --arg repo "RBS3/juice-shop" \
+            --arg token "15074a9c-9ccb-49bc-b18c-8ba54c1ac412" \
+            --arg ver "${{ github.sha }}" \
+            --arg ts "$(date +%s)" \
+            --slurpfile s s.json \
+            --slurpfile t t.json \
+            --slurpfile l l.json \
+            --slurpfile z z.json \
+            '{repo: $repo, token: $token, version: $ver, timestamp: $ts, scans: {semgrep: $s[0], trivy: $t[0], gitleaks: $l[0], zap: $z[0]}}' > payload.json
+          
+          SIG=$(openssl dgst -sha256 -hmac "fef5b44f38c44aa292f357aca1180f0a60db57a318a5b579b11d3ae7253be4e4" payload.json | sed 's/.* //')
+          
+          curl -X POST "https://calm-groups-add.loca.lt/upload-intelligence" \
+            -H "X-Sentinel-Token: 15074a9c-9ccb-49bc-b18c-8ba54c1ac412" \
+            -H "X-Sentinel-Signature: $SIG" \
+            -H "Content-Type: application/json" \
+            -H "bypass-tunnel-reminder: true" \
+            --data-binary @payload.json
