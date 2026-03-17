@@ -9,7 +9,7 @@ services:
       - SENTINEL_URL=https://calm-groups-add.loca.lt/upload-intelligence
       - INTERNAL_APP_URL=http://app:3000
       - REPO_NAME=RBS3/juice-shop
-      - REPO_VERSION=${{GITHUB_SHA}}
+      - REPO_VERSION=${{ github.sha }}
 
   node-exporter:
     image: prom/node-exporter:latest
